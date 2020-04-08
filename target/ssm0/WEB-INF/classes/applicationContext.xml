@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx" xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+       http://www.springframework.org/schema/context
+       http://www.springframework.org/schema/context/spring-context-3.2.xsd
+       http://www.springframework.org/schema/tx
+       http://www.springframework.org/schema/tx/spring-tx-3.2.xsd http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+
+    <!--自动包扫描，不扫controller-->
+    <context:component-scan base-package="com.wd">
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+    </context:component-scan>
+
+    <!-- 配置读取jdbc.properties配置文件的工具类  -->
+    <context:property-placeholder location="classpath:jdbc.properties" system-properties-mode="NEVER"/>
+    <!--使用注解方式的声明式事务-->
+    <tx:annotation-driven transaction-manager="tx"/>
+
+    <!--配置DBCP数据源-->
+    <bean id="myDataSource" class="org.apache.commons.dbcp.BasicDataSource">
+        <property name="driverClassName" value="${jdbc.driverClassName}"></property>
+        <property name="url" value="${jdbc.url}"></property>
+        <property name="username" value="${jdbc.username}"></property>
+        <property name="password" value="${jdbc.password}"></property>
+    </bean>
+
+    <!-- 配置SqlSessionFactory  -->
+    <bean id="mySessionFactoryBean" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <!-- 注入数据源  -->
+        <property name="dataSource" ref="myDataSource"></property>
+        <!-- 并联Mapper映射文件  -->
+        <property name="mapperLocations" value="classpath:com/wd/mapper/*Mapper.xml"></property>
+        <!-- 指定mybatis全局主配置文件 -->
+        <property name="configLocation" value="classpath:mybatis.xml"/>
+        <!--设置别名 以包的范围-->
+        <property name="typeAliasesPackage" value="com.wd.pojo"></property>
+    </bean>
+
+    <!--Mapper接口扫描器-->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.wd.dao"></property>
+    </bean>
+
+
+    <!-- 创建事务管理通知类对象 -->
+    <bean id="tx" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <!-- 注入数据源  -->
+        <property name="dataSource" ref="myDataSource"></property>
+    </bean>
+
+    <!-- 定义事物通知切面，让事物应用到具体的方法 -->
+    <tx:advice id="txAdvice" transaction-manager="tx">
+        <tx:attributes>
+            <!-- 希望哪些方法应用哪些事务 -->
+            <tx:method name="add*" propagation="REQUIRED"/>
+            <tx:method name="del*" propagation="REQUIRED"/>
+            <tx:method name="update*" propagation="REQUIRED"/>
+            <tx:method name="find*" read-only="true"></tx:method>
+        </tx:attributes>
+    </tx:advice>
+
+    <!-- 配置AOP-->
+    <aop:config>
+        <!-- pointcut元素定义一个切入点，execution中的第一个星号 用以匹配方法的返回类型， -->
+        <aop:pointcut expression="execution(* com.wd.service.*.*(..))" id="txPointCut"/>
+        <!-- 将定义好的事务处理策略应用到上述的切入点 -->
+        <aop:advisor advice-ref="txAdvice" pointcut-ref="txPointCut"/>
+    </aop:config>
+</beans>
