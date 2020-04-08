@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import java.util.Map;
 
 /**
- * %%%%%%
+ * %%%%
  * @author Administrator
  * @create 2020年01月24日 0024~00:42
  */
